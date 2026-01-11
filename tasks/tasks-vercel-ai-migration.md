@@ -99,11 +99,13 @@ Update after completing each sub-task, not just parent tasks.
   - [x] 8.3 Add retry logic with exponential backoff
   - [x] 8.4 Log failures for debugging
 
-- [ ] 9.0 Add Cost-Based Routing (Optional)
-  - [ ] 9.1 Create `router.ts` with task analysis logic
-  - [ ] 9.2 Route simple tasks to cheaper models (GPT-4o-mini, Gemini Flash)
-  - [ ] 9.3 Route creative tasks to Claude
-  - [ ] 9.4 Add configuration for routing preferences
+- [x] 9.0 Upgrade to Vercel AI Gateway with Latest Models
+  - [x] 9.1 Update provider.js to AI Gateway architecture
+  - [x] 9.2 Add Claude 4.5 models (Haiku, Sonnet, Opus)
+  - [x] 9.3 Add OpenAI GPT-5.2/o3/o4-mini models
+  - [x] 9.4 Add Gemini 3 models (Flash, Pro, Deep Think)
+  - [x] 9.5 Update model tiers (fast/smart/reasoning)
+  - [x] 9.6 Update environment variables for AI Gateway
 
 - [ ] 10.0 Testing & Documentation
   - [ ] 10.1 Test all providers manually

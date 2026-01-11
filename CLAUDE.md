@@ -31,10 +31,29 @@ npm run preview
 - **Icons**: Lucide React
 - **Fonts**: Google Fonts (Space Grotesk, DM Sans)
 
-### AI Providers (Multi-Model Support)
-- **Anthropic Claude**: claude-sonnet-4-20250514 (default, best for creative tasks)
-- **OpenAI GPT-4**: gpt-4o, gpt-4o-mini
-- **Google Gemini**: gemini-1.5-pro, gemini-1.5-flash
+### AI Providers (Multi-Model Support) - January 2026
+
+Architecture designed for Vercel AI Gateway compatibility. Currently uses direct provider SDKs for client-side operation.
+
+**Claude 4.5 Series** (Recommended for creative/design):
+- `claude-haiku-4-5-20251201` - Fast tier
+- `claude-sonnet-4-5-20251201` - Smart tier (default)
+- `claude-opus-4-5-20251101` - Reasoning tier
+
+**OpenAI GPT-5.2 / o-Series** (General/reasoning):
+- `o4-mini` - Fast tier
+- `gpt-5.2` - Smart tier
+- `o3` - Reasoning tier
+
+**Google Gemini 3** (Multimodal/fast):
+- `gemini-3-flash` - Fast tier
+- `gemini-3-pro` - Smart tier
+- `gemini-3-deep-think` - Reasoning tier
+
+**Model Tiers:**
+- **Fast** - Quick, cost-effective for simple tasks
+- **Smart** - Balanced for most design work (default)
+- **Reasoning** - Complex tasks requiring deep thinking
 
 ### Core Directories
 
