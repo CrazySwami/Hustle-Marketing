@@ -23,16 +23,29 @@ npm run preview
 
 ### Tech Stack
 - **Frontend**: React 18 with Vite 6
+- **AI Integration**: Vercel AI SDK with multi-provider support
 - **Styling**: CSS-in-JS (inline styles)
 - **State**: useReducer pattern for project state
 - **Animation**: Custom animation engine with easing functions
+- **Schema Validation**: Zod for AI structured outputs
 - **Icons**: Lucide React
 - **Fonts**: Google Fonts (Space Grotesk, DM Sans)
+
+### AI Providers (Multi-Model Support)
+- **Anthropic Claude**: claude-sonnet-4-20250514 (default, best for creative tasks)
+- **OpenAI GPT-4**: gpt-4o, gpt-4o-mini
+- **Google Gemini**: gemini-1.5-pro, gemini-1.5-flash
 
 ### Core Directories
 
 ```
 src/
+├── services/ai/       # AI service layer (Vercel AI SDK)
+│   ├── provider.js         # Multi-model provider abstraction
+│   ├── brand-generator.js  # Brand suggestions service
+│   ├── design-agent.js     # Design operations service
+│   ├── fallback.js         # Provider fallback logic
+│   └── schemas/            # Zod schemas for structured outputs
 ├── components/        # React UI components
 │   ├── AIChatPanel.jsx       # AI assistant chat interface
 │   ├── CanvasElement.jsx     # Renderable canvas elements

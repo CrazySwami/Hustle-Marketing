@@ -1,17 +1,34 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Loader2, Send } from 'lucide-react';
+import { Sparkles, Loader2, Send, RefreshCw } from 'lucide-react';
+import { executeDesignPrompt, executeOperations } from '../services/ai/design-agent.js';
+import { getDefaultProvider, providerInfo } from '../services/ai/provider.js';
+import ModelSelector from './ai/ModelSelector.jsx';
 
 const AIChatPanel = ({ project, selectedElement, dispatch, brand }) => {
     const [messages, setMessages] = useState([
-        { role: 'assistant', content: `Hi! I'm your creative AI assistant. I can help you design your ${project.canvas.name}. Try asking me to:\n\n• "Add a bold headline"\n• "Create a CTA button"\n• "Add a background gradient"\n\nWhat would you like to create?` }
+        {
+            role: 'assistant',
+            content: `Hi! I'm your creative AI assistant. I can help you design your ${project.canvas.name}. Try asking me to:\n\n• "Add a bold headline"\n• "Create a CTA button"\n• "Add a background gradient"\n\nWhat would you like to create?`
+        }
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [provider, setProvider] = useState(getDefaultProvider());
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
+
+    // Persist provider selection
+    useEffect(() => {
+        const saved = localStorage.getItem('ai-provider');
+        if (saved) setProvider(saved);
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('ai-provider', provider);
+    }, [provider]);
 
     const sendMessage = async () => {
         if (!input.trim() || isLoading) return;
@@ -22,162 +39,102 @@ const AIChatPanel = ({ project, selectedElement, dispatch, brand }) => {
         setIsLoading(true);
 
         try {
-            const systemPrompt = `You are a creative AI assistant helping design social media content. You control a canvas editor by returning JSON operations.
+            // Build context for the design agent
+            const context = {
+                canvas: project.canvas,
+                duration: project.duration,
+                elements: project.elements,
+                selectedElement,
+                brand: brand || project.brandGuide,
+            };
 
-CANVAS: ${project.canvas.width}x${project.canvas.height} pixels
-DURATION: ${project.duration}ms
-CURRENT ELEMENTS: ${project.elements.length} elements
-${selectedElement ? `SELECTED: ${selectedElement.name} (${selectedElement.type})` : 'No element selected'}
+            // Execute the design prompt
+            const result = await executeDesignPrompt(userMessage, context, provider);
 
-BRAND COLORS:
-- Primary: ${brand.colors.primary}
-- Secondary: ${brand.colors.secondary}
-- Accent: ${brand.colors.accent}
-- Background: ${brand.colors.background}
-- Text: ${brand.colors.text}
-- Heading Font: ${brand.fonts.heading}
-- Body Font: ${brand.fonts.body}
-
-AVAILABLE ANIMATIONS (use these exact names):
-- fadeIn: opacity 0→1 (great for text)
-- fadeOut: opacity 1→0
-- slideInLeft: x from -200 to 0
-- slideInRight: x from 200 to 0
-- slideInUp: y from 200 to 0
-- slideInDown: y from -200 to 0
-- scaleIn: scale 0→1 (great for shapes)
-- bounceIn: scale 0→1 with bounce
-- rotateIn: rotation -180→0
-
-OPERATIONS YOU CAN PERFORM:
-1. addElement - Add text, shapes, or images
-2. updateElement - Modify existing elements (need id)
-3. deleteElement - Remove elements (need id)
-
-IMPORTANT POSITIONING:
-- Canvas is ${project.canvas.width}x${project.canvas.height}
-- Center X: ${Math.round(project.canvas.width / 2)}
-- Center Y: ${Math.round(project.canvas.height / 2)}
-
-RESPOND WITH a brief explanation, then a JSON block:
-
-\`\`\`json
-{
-  "operations": [
-    {
-      "type": "addElement",
-      "element": {
-        "type": "text",
-        "name": "Main Heading",
-        "content": "Your Text",
-        "x": ${Math.round((project.canvas.width - 400) / 2)},
-        "y": ${Math.round((project.canvas.height - 80) / 2)},
-        "width": 400,
-        "height": 80,
-        "fontSize": 72,
-        "fontFamily": "${brand.fonts.heading}",
-        "fontWeight": 700,
-        "color": "${brand.colors.text}",
-        "textAlign": "center",
-        "rotation": 0,
-        "opacity": 1,
-        "animations": [
-          { "property": "opacity", "from": 0, "to": 1, "duration": 500, "ease": "power2.out", "startTime": 0 }
-        ]
-      }
-    }
-  ]
-}
-\`\`\`
-
-For shapes:
-{
-  "type": "shape",
-  "shapeType": "rectangle" or "circle",
-  "name": "Shape Name",
-  "x": 0, "y": 0,
-  "width": 200, "height": 200,
-  "fill": "#hexcolor",
-  "borderRadius": 0 (use 9999 for circles),
-  "opacity": 1,
-  "animations": [{ "property": "scale", "from": 0, "to": 1, "duration": 500, "ease": "back.out(1.7)", "startTime": 0 }]
-}
-
-ALWAYS include at least one animation for visual interest. Stagger animations with different startTime values (e.g., 0, 200, 400ms).`;
-
-            const response = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY || '',
-                    "anthropic-version": "2023-06-01",
-                    "anthropic-dangerous-direct-browser-access": "true"
-                },
-                body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 2000,
-                    system: systemPrompt,
-                    messages: [{ role: 'user', content: userMessage }],
-                })
-            });
-
-            const data = await response.json();
-            const assistantMessage = data.content?.map(c => c.text || '').join('') || '';
-
-            // Parse and execute operations
-            const jsonMatch = assistantMessage.match(/```json\s*([\s\S]*?)\s*```/);
-            if (jsonMatch) {
-                try {
-                    const { operations } = JSON.parse(jsonMatch[1]);
-                    if (operations && Array.isArray(operations)) {
-                        operations.forEach(op => {
-                            if (op.type === 'addElement' && op.element) {
-                                dispatch({ type: 'ADD_ELEMENT', element: op.element });
-                            } else if (op.type === 'updateElement' && op.id) {
-                                dispatch({ type: 'UPDATE_ELEMENT', id: op.id, updates: op.updates });
-                            } else if (op.type === 'deleteElement' && op.id) {
-                                dispatch({ type: 'DELETE_ELEMENT', id: op.id });
-                            }
-                        });
-                    }
-                } catch (e) {
-                    console.error('Failed to parse AI operations:', e);
+            if (result.success) {
+                // Execute the operations on the canvas
+                if (result.operations && result.operations.length > 0) {
+                    executeOperations(result.operations, dispatch);
                 }
+
+                // Add the assistant's response
+                const responseMessage = result.message ||
+                    `Done! I've made ${result.operations?.length || 0} change(s) to your canvas. Hit play to see your animations.`;
+
+                setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    content: responseMessage,
+                    operations: result.operations,
+                    provider: result.provider,
+                }]);
+            } else {
+                setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    content: `Sorry, I encountered an error: ${result.error}. Please try again.`,
+                    error: true,
+                }]);
             }
-
-            const cleanMessage = assistantMessage.replace(/```json[\s\S]*?```/g, '').trim();
-            setMessages(prev => [...prev, { role: 'assistant', content: cleanMessage || 'Done! Hit play to see your animations.' }]);
-
         } catch (err) {
             console.error('AI error:', err);
-            setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }]);
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: 'Sorry, I encountered an error. Please try again.',
+                error: true,
+            }]);
         }
 
         setIsLoading(false);
     };
 
+    const clearChat = () => {
+        setMessages([{
+            role: 'assistant',
+            content: `Chat cleared. I'm ready to help you design your ${project.canvas.name}. What would you like to create?`
+        }]);
+    };
+
     return (
         <div className="ai-chat-panel">
             <div className="chat-header">
-                <Sparkles size={18} />
-                <span>AI Assistant</span>
+                <div className="header-left">
+                    <Sparkles size={18} />
+                    <span>AI Assistant</span>
+                </div>
+                <div className="header-right">
+                    <ModelSelector value={provider} onChange={setProvider} compact />
+                    <button className="clear-btn" onClick={clearChat} title="Clear chat">
+                        <RefreshCw size={14} />
+                    </button>
+                </div>
             </div>
+
             <div className="chat-messages">
                 {messages.map((msg, i) => (
-                    <div key={i} className={`chat-message ${msg.role}`}>
+                    <div key={i} className={`chat-message ${msg.role} ${msg.error ? 'error' : ''}`}>
                         <div className="message-content">{msg.content}</div>
+                        {msg.operations && msg.operations.length > 0 && (
+                            <div className="operations-badge">
+                                {msg.operations.length} operation{msg.operations.length !== 1 ? 's' : ''} applied
+                            </div>
+                        )}
+                        {msg.provider && (
+                            <div className="provider-tag">
+                                {providerInfo[msg.provider]?.icon}
+                            </div>
+                        )}
                     </div>
                 ))}
                 {isLoading && (
                     <div className="chat-message assistant">
                         <div className="message-content loading">
                             <Loader2 className="spin" size={16} />
-                            <span>Creating...</span>
+                            <span>Creating with {providerInfo[provider]?.name}...</span>
                         </div>
                     </div>
                 )}
                 <div ref={messagesEndRef} />
             </div>
+
             <div className="chat-input">
                 <input
                     type="text"
@@ -191,6 +148,67 @@ ALWAYS include at least one animation for visual interest. Stagger animations wi
                     <Send size={18} />
                 </button>
             </div>
+
+            <style>{`
+                .chat-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 12px 16px;
+                    border-bottom: 1px solid rgba(255,255,255,0.1);
+                }
+                .header-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-weight: 600;
+                }
+                .header-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .clear-btn {
+                    padding: 4px;
+                    background: transparent;
+                    border: none;
+                    color: rgba(255,255,255,0.5);
+                    cursor: pointer;
+                    border-radius: 4px;
+                    transition: all 0.15s;
+                }
+                .clear-btn:hover {
+                    background: rgba(255,255,255,0.1);
+                    color: rgba(255,255,255,0.8);
+                }
+                .chat-message.error .message-content {
+                    color: #f87171;
+                }
+                .operations-badge {
+                    font-size: 10px;
+                    background: rgba(34, 197, 94, 0.2);
+                    color: #22c55e;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    margin-top: 6px;
+                    display: inline-block;
+                }
+                .provider-tag {
+                    position: absolute;
+                    top: 4px;
+                    right: 8px;
+                    font-size: 12px;
+                    opacity: 0.5;
+                }
+                .chat-message {
+                    position: relative;
+                }
+                .message-content.loading {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+            `}</style>
         </div>
     );
 };
