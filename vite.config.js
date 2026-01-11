@@ -8,10 +8,9 @@ export default defineConfig({
     open: true
   },
   define: {
-    // Expose environment variables to the client
-    'process.env.ANTHROPIC_API_KEY': JSON.stringify(process.env.VITE_ANTHROPIC_API_KEY),
-    'process.env.OPENAI_API_KEY': JSON.stringify(process.env.VITE_OPENAI_API_KEY),
-    'process.env.GOOGLE_GENERATIVE_AI_API_KEY': JSON.stringify(process.env.VITE_GOOGLE_GENERATIVE_AI_API_KEY),
+    // Expose AI Gateway API key to the client
+    // Single key provides access to all AI providers via Vercel AI Gateway
+    'process.env.AI_GATEWAY_API_KEY': JSON.stringify(process.env.VITE_AI_GATEWAY_API_KEY),
   },
   resolve: {
     alias: {

@@ -31,29 +31,43 @@ npm run preview
 - **Icons**: Lucide React
 - **Fonts**: Google Fonts (Space Grotesk, DM Sans)
 
-### AI Providers (Multi-Model Support) - January 2026
+### AI Integration: Vercel AI Gateway (January 2026)
 
-Architecture designed for Vercel AI Gateway compatibility. Currently uses direct provider SDKs for client-side operation.
+Uses **Vercel AI Gateway** with a single API key to access 100+ models from all providers.
+No individual provider keys needed - the gateway handles routing automatically.
+
+**Setup:**
+1. Get API key from: https://vercel.com/dashboard → AI Gateway → API Keys
+2. Set `VITE_AI_GATEWAY_API_KEY` in `.env.local`
+
+**Model Format:** `"provider/model-name"`
 
 **Claude 4.5 Series** (Recommended for creative/design):
-- `claude-haiku-4-5-20251201` - Fast tier
-- `claude-sonnet-4-5-20251201` - Smart tier (default)
-- `claude-opus-4-5-20251101` - Reasoning tier
+- `anthropic/claude-haiku-4.5` - Fast tier
+- `anthropic/claude-sonnet-4.5` - Smart tier (default)
+- `anthropic/claude-opus-4.5` - Reasoning tier
 
 **OpenAI GPT-5.2 / o-Series** (General/reasoning):
-- `o4-mini` - Fast tier
-- `gpt-5.2` - Smart tier
-- `o3` - Reasoning tier
+- `openai/o4-mini` - Fast tier
+- `openai/gpt-5.2` - Smart tier
+- `openai/o3` - Reasoning tier
 
 **Google Gemini 3** (Multimodal/fast):
-- `gemini-3-flash` - Fast tier
-- `gemini-3-pro` - Smart tier
-- `gemini-3-deep-think` - Reasoning tier
+- `google/gemini-3-flash` - Fast tier
+- `google/gemini-3-pro` - Smart tier
+- `google/gemini-2.5-pro` - Reasoning tier
 
 **Model Tiers:**
 - **Fast** - Quick, cost-effective for simple tasks
 - **Smart** - Balanced for most design work (default)
 - **Reasoning** - Complex tasks requiring deep thinking
+
+**Benefits:**
+- Single API key for all providers
+- No markup on token prices
+- Automatic fallback routing
+- <20ms latency overhead
+- Browse models: https://vercel.com/ai-gateway/models
 
 ### Core Directories
 

@@ -1,61 +1,55 @@
 /**
- * AI Provider Abstraction Layer - Vercel AI Gateway Ready
+ * Vercel AI Gateway Provider
  *
- * This module provides a unified interface for multiple AI providers.
- * Currently uses direct provider SDKs for client-side Vite compatibility.
- * Architecture is designed to easily migrate to Vercel AI Gateway when
- * a backend proxy is added.
+ * Uses a single AI Gateway API key to access 100+ models from multiple providers.
+ * No need for individual provider API keys - the gateway handles routing.
+ *
+ * Model format: "provider/model-name"
+ * Docs: https://vercel.com/docs/ai-gateway
  *
  * Latest Models (January 2026):
- * - Claude 4.5: Opus, Sonnet, Haiku
- * - OpenAI: GPT-5.2, o3, o4-mini
- * - Google: Gemini 3 Flash, Pro, Deep Think
+ * - Anthropic: claude-opus-4.5, claude-sonnet-4.5, claude-haiku-4.5
+ * - OpenAI: gpt-5.2, o3, o4-mini
+ * - Google: gemini-3-pro, gemini-3-flash
  */
 
-import { createOpenAI } from '@ai-sdk/openai';
-import { createAnthropic } from '@ai-sdk/anthropic';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createGateway } from 'ai';
 
-// Initialize providers with API keys from environment
-const openai = createOpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
-});
-
-const anthropic = createAnthropic({
-  apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY || '',
-});
-
-const google = createGoogleGenerativeAI({
-  apiKey: import.meta.env.VITE_GOOGLE_GENERATIVE_AI_API_KEY || '',
+// Create the AI Gateway instance with your API key
+const gateway = createGateway({
+  apiKey: import.meta.env.VITE_AI_GATEWAY_API_KEY || '',
+  // Optional: custom base URL if self-hosting
+  // baseURL: 'https://ai-gateway.vercel.sh/v1',
 });
 
 /**
- * Model registry with latest versions (January 2026)
+ * Model registry with AI Gateway model strings
+ * Format: "provider/model-name"
  *
  * Tiers:
- * - fast: Quick, cost-effective models for simple tasks
- * - smart: Balanced models for most design/creative tasks
- * - reasoning: Advanced models for complex reasoning and planning
+ * - fast: Quick, cost-effective for simple tasks
+ * - smart: Balanced for most design/creative tasks
+ * - reasoning: Advanced models for complex tasks
  */
 export const modelRegistry = {
-  // Claude 4.5 Series - Best for creative and design tasks
+  // Anthropic Claude 4.5 Series
   anthropic: {
     fast: {
-      id: 'claude-haiku-4-5-20251201',
+      id: 'anthropic/claude-haiku-4.5',
       name: 'Claude Haiku 4.5',
       description: 'Fast & efficient for quick tasks',
-      inputCost: 0.80,  // per 1M tokens
+      inputCost: 0.80,
       outputCost: 4.00,
     },
     smart: {
-      id: 'claude-sonnet-4-5-20251201',
+      id: 'anthropic/claude-sonnet-4.5',
       name: 'Claude Sonnet 4.5',
       description: 'Balanced for creative design work',
       inputCost: 3.00,
       outputCost: 15.00,
     },
     reasoning: {
-      id: 'claude-opus-4-5-20251101',
+      id: 'anthropic/claude-opus-4.5',
       name: 'Claude Opus 4.5',
       description: 'Most capable for complex reasoning',
       inputCost: 15.00,
@@ -63,24 +57,24 @@ export const modelRegistry = {
     },
   },
 
-  // OpenAI GPT-5.2 & o-series - Best for general tasks
+  // OpenAI GPT-5.2 & o-series
   openai: {
     fast: {
-      id: 'o4-mini',
+      id: 'openai/o4-mini',
       name: 'o4-mini',
       description: 'Fast reasoning model',
       inputCost: 1.10,
       outputCost: 4.40,
     },
     smart: {
-      id: 'gpt-5.2',
+      id: 'openai/gpt-5.2',
       name: 'GPT-5.2',
       description: 'Latest GPT for balanced performance',
       inputCost: 2.50,
       outputCost: 10.00,
     },
     reasoning: {
-      id: 'o3',
+      id: 'openai/o3',
       name: 'o3',
       description: 'Advanced reasoning capabilities',
       inputCost: 10.00,
@@ -88,25 +82,25 @@ export const modelRegistry = {
     },
   },
 
-  // Gemini 3 Series - Best for multimodal and fast tasks
+  // Google Gemini 3 Series
   google: {
     fast: {
-      id: 'gemini-3-flash',
+      id: 'google/gemini-3-flash',
       name: 'Gemini 3 Flash',
       description: 'Ultra-fast multimodal model',
       inputCost: 0.50,
       outputCost: 1.50,
     },
     smart: {
-      id: 'gemini-3-pro',
+      id: 'google/gemini-3-pro',
       name: 'Gemini 3 Pro',
       description: 'Balanced multimodal performance',
       inputCost: 1.25,
       outputCost: 5.00,
     },
     reasoning: {
-      id: 'gemini-3-deep-think',
-      name: 'Gemini 3 Deep Think',
+      id: 'google/gemini-2.5-pro',
+      name: 'Gemini 2.5 Pro',
       description: 'Extended thinking for complex problems',
       inputCost: 3.50,
       outputCost: 14.00,
@@ -115,23 +109,24 @@ export const modelRegistry = {
 };
 
 /**
- * Create model instances from registry
+ * Create model instances using the gateway
+ * The gateway routes requests to the appropriate provider
  */
 export const models = {
-  openai: {
-    fast: openai(modelRegistry.openai.fast.id),
-    smart: openai(modelRegistry.openai.smart.id),
-    reasoning: openai(modelRegistry.openai.reasoning.id),
-  },
   anthropic: {
-    fast: anthropic(modelRegistry.anthropic.fast.id),
-    smart: anthropic(modelRegistry.anthropic.smart.id),
-    reasoning: anthropic(modelRegistry.anthropic.reasoning.id),
+    fast: gateway(modelRegistry.anthropic.fast.id),
+    smart: gateway(modelRegistry.anthropic.smart.id),
+    reasoning: gateway(modelRegistry.anthropic.reasoning.id),
+  },
+  openai: {
+    fast: gateway(modelRegistry.openai.fast.id),
+    smart: gateway(modelRegistry.openai.smart.id),
+    reasoning: gateway(modelRegistry.openai.reasoning.id),
   },
   google: {
-    fast: google(modelRegistry.google.fast.id),
-    smart: google(modelRegistry.google.smart.id),
-    reasoning: google(modelRegistry.google.reasoning.id),
+    fast: gateway(modelRegistry.google.fast.id),
+    smart: gateway(modelRegistry.google.smart.id),
+    reasoning: gateway(modelRegistry.google.reasoning.id),
   },
 };
 
@@ -164,32 +159,18 @@ export const providerInfo = {
 };
 
 /**
- * AI Gateway model strings (for future backend integration)
- * Format: provider/model-name
+ * Get the gateway instance for direct use
+ * @returns {function} The gateway function
  */
-export const gatewayModels = {
-  anthropic: {
-    fast: 'anthropic/claude-haiku-4-5-20251201',
-    smart: 'anthropic/claude-sonnet-4-5-20251201',
-    reasoning: 'anthropic/claude-opus-4-5-20251101',
-  },
-  openai: {
-    fast: 'openai/o4-mini',
-    smart: 'openai/gpt-5.2',
-    reasoning: 'openai/o3',
-  },
-  google: {
-    fast: 'google/gemini-3-flash',
-    smart: 'google/gemini-3-pro',
-    reasoning: 'google/gemini-3-deep-think',
-  },
-};
+export function getGateway() {
+  return gateway;
+}
 
 /**
  * Get a model by provider and tier
  * @param {string} provider - 'openai' | 'anthropic' | 'google'
  * @param {string} tier - 'fast' | 'smart' | 'reasoning'
- * @returns {object} The model instance
+ * @returns {object} The gateway model instance
  */
 export function getModel(provider = 'anthropic', tier = 'smart') {
   const providerModels = models[provider];
@@ -198,6 +179,18 @@ export function getModel(provider = 'anthropic', tier = 'smart') {
     return models.anthropic[tier] || models.anthropic.smart;
   }
   return providerModels[tier] || providerModels.smart;
+}
+
+/**
+ * Get model ID string for direct gateway calls
+ * @param {string} provider - Provider name
+ * @param {string} tier - Model tier
+ * @returns {string} The model ID string (e.g., "anthropic/claude-sonnet-4.5")
+ */
+export function getModelId(provider = 'anthropic', tier = 'smart') {
+  const registry = modelRegistry[provider];
+  if (!registry) return modelRegistry.anthropic[tier]?.id || modelRegistry.anthropic.smart.id;
+  return registry[tier]?.id || registry.smart.id;
 }
 
 /**
@@ -221,21 +214,24 @@ export function getDefaultProvider() {
 }
 
 /**
- * Check if a provider is configured (has API key)
+ * Check if the AI Gateway is configured
+ * @returns {boolean} Whether the gateway API key is set
+ */
+export function isGatewayConfigured() {
+  return !!import.meta.env.VITE_AI_GATEWAY_API_KEY;
+}
+
+/**
+ * Check if a provider is available (gateway configured = all providers available)
  * @param {string} provider - The provider ID
- * @returns {boolean} Whether the provider is configured
+ * @returns {boolean} Whether the provider is available
  */
 export function isProviderConfigured(provider) {
-  switch (provider) {
-    case 'openai':
-      return !!import.meta.env.VITE_OPENAI_API_KEY;
-    case 'anthropic':
-      return !!import.meta.env.VITE_ANTHROPIC_API_KEY;
-    case 'google':
-      return !!import.meta.env.VITE_GOOGLE_GENERATIVE_AI_API_KEY;
-    default:
-      return false;
+  // With AI Gateway, all providers are available if the gateway key is set
+  if (isGatewayConfigured()) {
+    return ['anthropic', 'openai', 'google'].includes(provider);
   }
+  return false;
 }
 
 /**
@@ -243,7 +239,10 @@ export function isProviderConfigured(provider) {
  * @returns {string[]} Array of configured provider IDs
  */
 export function getConfiguredProviders() {
-  return ['anthropic', 'openai', 'google'].filter(isProviderConfigured);
+  if (isGatewayConfigured()) {
+    return ['anthropic', 'openai', 'google'];
+  }
+  return [];
 }
 
 /**
@@ -269,16 +268,38 @@ export function estimateCost(provider, tier, inputTokens, outputTokens) {
   return inputCost + outputCost;
 }
 
+/**
+ * Get all available models as a flat list
+ * @returns {Array} List of all models with provider and tier info
+ */
+export function getAllModels() {
+  const allModels = [];
+  for (const [provider, tiers] of Object.entries(modelRegistry)) {
+    for (const [tier, info] of Object.entries(tiers)) {
+      allModels.push({
+        provider,
+        tier,
+        ...info,
+      });
+    }
+  }
+  return allModels;
+}
+
 export default {
+  gateway,
   models,
   modelRegistry,
   providerInfo,
-  gatewayModels,
+  getGateway,
   getModel,
+  getModelId,
   getModelInfo,
   getDefaultProvider,
+  isGatewayConfigured,
   isProviderConfigured,
   getConfiguredProviders,
   getModelTiers,
   estimateCost,
+  getAllModels,
 };
