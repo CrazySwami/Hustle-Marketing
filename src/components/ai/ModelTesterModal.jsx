@@ -11,6 +11,7 @@ import {
   quickHealthCheck,
   getTestableModels,
   estimateTestCosts,
+  isSimulationMode,
 } from '../../services/ai/model-tester.js';
 
 const ModelTesterModal = ({ isOpen, onClose }) => {
@@ -20,15 +21,17 @@ const ModelTesterModal = ({ isOpen, onClose }) => {
   const [currentTest, setCurrentTest] = useState(null);
   const [testType, setTestType] = useState(null);
 
-  if (!isOpen) return null;
-
-  const testableModels = getTestableModels();
-  const costEstimate = estimateTestCosts();
-
   const handleProgress = useCallback((model, result) => {
     setCurrentTest(model.name);
     setResults(prev => [...prev, result]);
   }, []);
+
+  // Early return AFTER all hooks
+  if (!isOpen) return null;
+
+  const testableModels = getTestableModels();
+  const costEstimate = estimateTestCosts();
+  const simulationMode = isSimulationMode();
 
   const runQuickHealthCheck = async () => {
     setIsRunning(true);
@@ -98,9 +101,19 @@ const ModelTesterModal = ({ isOpen, onClose }) => {
             <AlertCircle size={16} />
             <span>
               Tests {testableModels.length} models with minimal tokens.
-              Estimated cost: <strong>{costEstimate.formatted}</strong>
+              {simulationMode ? (
+                <strong className="sim-badge"> Simulation Mode</strong>
+              ) : (
+                <>Estimated cost: <strong>{costEstimate.formatted}</strong></>
+              )}
             </span>
           </div>
+
+          {simulationMode && (
+            <div className="simulation-notice">
+              <span>Running in simulation mode. Real API testing requires a backend server to keep API keys secure. Results shown are simulated to demonstrate the UI.</span>
+            </div>
+          )}
 
           <div className="test-actions">
             <button
@@ -278,9 +291,26 @@ const ModelTesterModal = ({ isOpen, onClose }) => {
             background: rgba(59,130,246,0.1);
             border: 1px solid rgba(59,130,246,0.3);
             border-radius: 8px;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             font-size: 13px;
             color: #93c5fd;
+          }
+          .sim-badge {
+            background: rgba(234,179,8,0.2);
+            color: #EAB308;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 4px;
+          }
+          .simulation-notice {
+            padding: 10px 12px;
+            background: rgba(234,179,8,0.1);
+            border: 1px solid rgba(234,179,8,0.3);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            color: #fcd34d;
+            line-height: 1.4;
           }
           .test-actions {
             display: flex;

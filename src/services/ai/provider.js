@@ -3,23 +3,15 @@
  *
  * Single API key for 100+ models across all providers.
  * Model format: "provider/model-name"
+ *
+ * The AI SDK automatically uses the AI Gateway when you pass
+ * a model string in the provider/model-name format.
+ *
  * Docs: https://vercel.com/docs/ai-gateway
  * Browse models: https://vercel.com/ai-gateway/models
- *
- * Capabilities:
- * - Text generation (GPT, Claude, Gemini)
- * - Image generation (GPT-Image, DALL-E, Gemini Image)
- * - Audio transcription (Whisper)
- * - Text-to-speech (TTS)
- * - Embeddings
  */
 
-import { createGateway } from 'ai';
-
-// Create the AI Gateway instance
-const gateway = createGateway({
-  apiKey: import.meta.env.VITE_AI_GATEWAY_API_KEY || '',
-});
+import { createOpenAI } from '@ai-sdk/openai';
 
 // ============================================================================
 // OPENAI MODELS
@@ -71,7 +63,7 @@ export const openaiModels = {
       id: 'openai/o3',
       name: 'o3',
       description: 'Advanced reasoning capabilities',
-      inputCost: 2.00,  // Standard pricing
+      inputCost: 2.00,
       outputCost: 8.00,
       contextWindow: 200000,
       tier: 'smart',
@@ -93,8 +85,8 @@ export const openaiModels = {
       id: 'openai/gpt-image-1',
       name: 'GPT Image',
       description: 'Latest image generation with text rendering',
-      inputCost: 10.00,  // per 1M tokens
-      outputCostLow: 0.011,    // per image 1024x1024
+      inputCost: 10.00,
+      outputCostLow: 0.011,
       outputCostMedium: 0.042,
       outputCostHigh: 0.167,
       capabilities: ['generate', 'edit', 'inpaint'],
@@ -249,14 +241,14 @@ export const googleModels = {
       description: 'Balanced multimodal performance',
       inputCost: 2.00,
       outputCost: 12.00,
-      inputCostLongContext: 4.00,  // >200K tokens
+      inputCostLongContext: 4.00,
       outputCostLongContext: 18.00,
       contextWindow: 2000000,
       tier: 'smart',
       thinkingLevels: ['low', 'high'],
     },
     'gemini-3-pro-thinking': {
-      id: 'google/gemini-3-pro',  // Same model, different config
+      id: 'google/gemini-3-pro',
       name: 'Gemini 3 Pro (Deep Think)',
       description: 'Extended reasoning with thinking_level: high',
       inputCost: 2.00,
@@ -339,27 +331,6 @@ export const modelRegistryOSeries = {
 };
 
 // ============================================================================
-// MODEL INSTANCES
-// ============================================================================
-export const models = {
-  anthropic: {
-    fast: gateway(modelRegistry.anthropic.fast.id),
-    smart: gateway(modelRegistry.anthropic.smart.id),
-    reasoning: gateway(modelRegistry.anthropic.reasoning.id),
-  },
-  openai: {
-    fast: gateway(modelRegistry.openai.fast.id),
-    smart: gateway(modelRegistry.openai.smart.id),
-    reasoning: gateway(modelRegistry.openai.reasoning.id),
-  },
-  google: {
-    fast: gateway(modelRegistry.google.fast.id),
-    smart: gateway(modelRegistry.google.smart.id),
-    reasoning: gateway(modelRegistry.google.reasoning.id),
-  },
-};
-
-// ============================================================================
 // PROVIDER INFO (For UI)
 // ============================================================================
 export const providerInfo = {
@@ -405,8 +376,8 @@ export const capabilities = {
     openai: ['text-embedding-3-small', 'text-embedding-3-large'],
   },
   longContext: {
-    google: ['gemini-3-pro', 'gemini-3-flash'],  // Up to 2M tokens
-    anthropic: ['claude-opus-4.5', 'claude-sonnet-4.5', 'claude-haiku-4.5'],  // 200K
+    google: ['gemini-3-pro', 'gemini-3-flash'],
+    anthropic: ['claude-opus-4.5', 'claude-sonnet-4.5', 'claude-haiku-4.5'],
   },
 };
 
@@ -414,39 +385,65 @@ export const capabilities = {
 // HELPER FUNCTIONS
 // ============================================================================
 
-export function getGateway() {
-  return gateway;
+/**
+ * Create AI Gateway instance
+ * Uses OpenAI-compatible API with AI Gateway base URL
+ */
+function createGateway() {
+  return createOpenAI({
+    apiKey: import.meta.env.VITE_AI_GATEWAY_API_KEY,
+    baseURL: 'https://api.vercel.ai/v1',
+  });
 }
 
+/**
+ * Get a model instance for use with Vercel AI SDK
+ * @param {string} provider - Provider name (anthropic, openai, google)
+ * @param {string} tier - Model tier (fast, smart, reasoning)
+ * @returns {object} Model instance for generateText/generateObject
+ */
 export function getModel(provider = 'anthropic', tier = 'smart') {
-  const providerModels = models[provider];
-  if (!providerModels) {
-    console.warn(`Unknown provider: ${provider}, falling back to anthropic`);
-    return models.anthropic[tier] || models.anthropic.smart;
-  }
-  return providerModels[tier] || providerModels.smart;
+  const modelId = getModelId(provider, tier);
+  const gateway = createGateway();
+  return gateway(modelId);
 }
 
+/**
+ * Get model ID string by provider and tier
+ * Use this directly with generateText({ model: getModelId(...) })
+ */
 export function getModelId(provider = 'anthropic', tier = 'smart') {
   const registry = modelRegistry[provider];
   if (!registry) return modelRegistry.anthropic[tier]?.id;
   return registry[tier]?.id || registry.smart.id;
 }
 
+/**
+ * Get model metadata by provider and tier
+ */
 export function getModelInfo(provider = 'anthropic', tier = 'smart') {
   const registry = modelRegistry[provider];
   if (!registry) return modelRegistry.anthropic[tier];
   return registry[tier] || registry.smart;
 }
 
+/**
+ * Get the default provider from environment or fallback
+ */
 export function getDefaultProvider() {
   return import.meta.env.VITE_DEFAULT_AI_PROVIDER || 'anthropic';
 }
 
+/**
+ * Check if the AI Gateway is configured
+ */
 export function isGatewayConfigured() {
   return !!import.meta.env.VITE_AI_GATEWAY_API_KEY;
 }
 
+/**
+ * Check if a provider is available
+ */
 export function isProviderConfigured(provider) {
   if (isGatewayConfigured()) {
     return ['anthropic', 'openai', 'google'].includes(provider);
@@ -454,6 +451,9 @@ export function isProviderConfigured(provider) {
   return false;
 }
 
+/**
+ * Get list of configured providers
+ */
 export function getConfiguredProviders() {
   if (isGatewayConfigured()) {
     return ['anthropic', 'openai', 'google'];
@@ -461,17 +461,26 @@ export function getConfiguredProviders() {
   return [];
 }
 
+/**
+ * Get all available model tiers
+ */
 export function getModelTiers() {
   return ['fast', 'smart', 'reasoning'];
 }
 
+/**
+ * Estimate cost for a request
+ */
 export function estimateCost(provider, tier, inputTokens, outputTokens) {
   const info = getModelInfo(provider, tier);
-  const inputCost = (inputTokens / 1_000_000) * info.inputCost;
-  const outputCost = (outputTokens / 1_000_000) * info.outputCost;
+  const inputCost = (inputTokens / 1_000_000) * (info?.inputCost || 0);
+  const outputCost = (outputTokens / 1_000_000) * (info?.outputCost || 0);
   return inputCost + outputCost;
 }
 
+/**
+ * Get all models organized by provider
+ */
 export function getAllModels() {
   return {
     openai: openaiModels,
@@ -480,6 +489,9 @@ export function getAllModels() {
   };
 }
 
+/**
+ * Get image generation models
+ */
 export function getImageModels() {
   return {
     openai: openaiModels.image,
@@ -487,17 +499,21 @@ export function getImageModels() {
   };
 }
 
+/**
+ * Get audio models
+ */
 export function getAudioModels() {
   return openaiModels.audio;
 }
 
+/**
+ * Get embedding models
+ */
 export function getEmbeddingModels() {
   return openaiModels.embeddings;
 }
 
 export default {
-  gateway,
-  models,
   modelRegistry,
   modelRegistryOSeries,
   providerInfo,
@@ -505,7 +521,6 @@ export default {
   openaiModels,
   anthropicModels,
   googleModels,
-  getGateway,
   getModel,
   getModelId,
   getModelInfo,

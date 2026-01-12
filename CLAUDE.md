@@ -162,11 +162,65 @@ Elements support keyframe animations with:
 - Canvas elements are rendered with CSS transforms for performance
 - Export currently limited to JSON; video export planned
 
-## Testing
+## Testing & Quality System
 
-Currently no test framework configured. Recommended additions:
-- Vitest for unit tests
-- Playwright for E2E testing
+### Test Stack
+- **Vitest** - Unit testing with jsdom environment
+- **Playwright** - E2E testing across Chrome, Firefox, Safari, Mobile
+- **Storybook** - Component development and visual testing
+- **Haiku Visual QA** - AI-powered screenshot analysis
+
+### Commands
+```bash
+# Unit tests
+npm run test              # Watch mode
+npm run test:run          # Single run
+npm run test:coverage     # With coverage
+
+# E2E tests
+npm run e2e               # Run all E2E tests
+npm run e2e:ui            # Interactive UI mode
+npm run e2e:debug         # Debug mode
+
+# Storybook
+npm run storybook         # Dev server on :6006
+npm run storybook:build   # Production build
+
+# Visual QA
+npm run visual-qa         # Full Haiku audit
+
+# Full QA
+npm run qa                # lint + unit + e2e
+```
+
+### Registry System
+Tracks components, test results, and QA findings:
+
+```bash
+npm run registry:init     # Initialize with existing components
+npm run registry:check    # Check what tests a file needs
+npm run registry:run      # Run appropriate tests for files
+npm run registry:summary  # View registry status
+```
+
+### Claude Code Hooks
+Tests auto-trigger based on file type during development:
+
+| File Pattern | Tests Triggered |
+|--------------|-----------------|
+| `src/components/ui/**` | Visual + Unit |
+| `src/app/api/**` | E2E |
+| `*.stories.*` | Visual QA (Haiku) |
+| `src/lib/**` | Unit |
+| `src/app/**/page.*` | E2E |
+
+Configuration: `.claude/hooks.json`
+
+### Test Registry
+Maps files to required tests in `src/lib/registry/`:
+- `test-registry.js` - File pattern → test type mapping
+- `tracking-registry.js` - Component/test/QA tracking
+- Persisted to `.registry/` directory
 
 ## Performance Considerations
 
