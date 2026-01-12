@@ -5,6 +5,10 @@ import LoadingScreen from './components/LoadingScreen.jsx';
 import LibraryView from './components/LibraryView.jsx';
 import BrandGuideGenerator from './components/BrandGuideGenerator.jsx';
 import EditorView from './components/EditorView.jsx';
+import ModelStatsModal from './components/ai/ModelStatsModal.jsx';
+import ModelTesterModal from './components/ai/ModelTesterModal.jsx';
+import CostTrackerWidget from './components/ai/CostTrackerWidget.jsx';
+import { useCostTracker } from './hooks/useCostTracker.js';
 import './styles/index.css';
 
 export default function App() {
@@ -12,6 +16,13 @@ export default function App() {
     const [projects, setProjects] = useState([]);
     const [brandGuides, setBrandGuides] = useState([DEFAULT_BRAND]);
     const [currentProject, dispatch] = useReducer(projectReducer, null);
+
+    // AI Modals
+    const [showModelStats, setShowModelStats] = useState(false);
+    const [showModelTester, setShowModelTester] = useState(false);
+
+    // Cost tracking
+    const costTracker = useCostTracker();
 
     useEffect(() => {
         const loadData = async () => {
@@ -82,13 +93,49 @@ export default function App() {
                     projects={projects} brandGuides={brandGuides}
                     onCreateProject={handleCreateProject} onOpenProject={handleOpenProject}
                     onCreateBrand={() => setView('brand-generator')}
+                    onShowModelStats={() => setShowModelStats(true)}
+                    onShowModelTester={() => setShowModelTester(true)}
                 />
             )}
             {view === 'brand-generator' && (
                 <BrandGuideGenerator onComplete={handleBrandComplete} onBack={() => setView('library')} />
             )}
             {view === 'editor' && currentProject && (
-                <EditorView project={currentProject} dispatch={dispatch} onBack={handleBackToLibrary} onSave={handleSaveProject} />
+                <EditorView
+                    project={currentProject}
+                    dispatch={dispatch}
+                    onBack={handleBackToLibrary}
+                    onSave={handleSaveProject}
+                    costTracker={costTracker}
+                    onShowModelStats={() => setShowModelStats(true)}
+                    onShowModelTester={() => setShowModelTester(true)}
+                />
+            )}
+
+            {/* AI Model Stats Modal */}
+            <ModelStatsModal
+                isOpen={showModelStats}
+                onClose={() => setShowModelStats(false)}
+            />
+
+            {/* AI Model Tester Modal */}
+            <ModelTesterModal
+                isOpen={showModelTester}
+                onClose={() => setShowModelTester(false)}
+            />
+
+            {/* Cost Tracker Widget */}
+            {view !== 'loading' && (
+                <CostTrackerWidget
+                    totalCost={costTracker.totalCost}
+                    requestCount={costTracker.requestCount}
+                    totalInputTokens={costTracker.totalInputTokens}
+                    totalOutputTokens={costTracker.totalOutputTokens}
+                    getCostsByProvider={costTracker.getCostsByProvider}
+                    formatCost={costTracker.formatCost}
+                    getSessionDuration={costTracker.getSessionDuration}
+                    onReset={costTracker.resetSession}
+                />
             )}
         </div>
     );

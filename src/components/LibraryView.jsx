@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, Zap, Layers } from 'lucide-react';
+import { Plus, Zap, Layers, BarChart3, FlaskConical } from 'lucide-react';
 import { CANVAS_PRESETS } from '../constants/index.js';
 
-const LibraryView = ({ projects, brandGuides, onCreateProject, onOpenProject, onCreateBrand }) => {
+const LibraryView = ({ projects, brandGuides, onCreateProject, onOpenProject, onCreateBrand, onShowModelStats, onShowModelTester }) => {
     const [showPresetModal, setShowPresetModal] = useState(false);
 
     return (
@@ -12,10 +12,18 @@ const LibraryView = ({ projects, brandGuides, onCreateProject, onOpenProject, on
                     <Zap size={28} />
                     <span>Social Canvas AI</span>
                 </div>
-                <button className="btn-primary" onClick={() => setShowPresetModal(true)}>
-                    <Plus size={18} />
-                    Create New
-                </button>
+                <div className="header-actions">
+                    <button className="btn-icon" onClick={onShowModelStats} title="AI Model Stats & Pricing">
+                        <BarChart3 size={18} />
+                    </button>
+                    <button className="btn-icon" onClick={onShowModelTester} title="Test AI Models">
+                        <FlaskConical size={18} />
+                    </button>
+                    <button className="btn-primary" onClick={() => setShowPresetModal(true)}>
+                        <Plus size={18} />
+                        Create New
+                    </button>
+                </div>
             </header>
 
             <main className="library-content">
