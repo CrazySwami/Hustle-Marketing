@@ -9,6 +9,7 @@ import ModelStatsModal from './components/ai/ModelStatsModal.jsx';
 import ModelTesterModal from './components/ai/ModelTesterModal.jsx';
 import CostTrackerWidget from './components/ai/CostTrackerWidget.jsx';
 import { useCostTracker } from './hooks/useCostTracker.js';
+import './styles/globals.css';
 import './styles/index.css';
 
 export default function App() {

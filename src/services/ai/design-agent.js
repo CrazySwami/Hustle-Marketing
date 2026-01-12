@@ -1,11 +1,31 @@
 /**
  * Design Agent Service
  * Handles AI-powered design operations using Vercel AI SDK
+ *
+ * NOTE: Real AI calls require a backend server to keep API keys secure.
+ * In client-side mode, this module provides simulated responses.
  */
 
 import { generateObject } from 'ai';
-import { getModel, getDefaultProvider } from './provider.js';
+import { getModel, getDefaultProvider, isGatewayConfigured } from './provider.js';
 import { DesignOperationsSchema } from './schemas/design-operations.js';
+
+/**
+ * Check if we can make real API calls
+ * (Only works with a backend server due to CORS)
+ */
+function canMakeRealCalls() {
+  // In a browser-only app, we can't make secure AI API calls
+  // due to CORS and API key exposure concerns
+  return false;
+}
+
+/**
+ * Check if running in simulation mode
+ */
+export function isSimulationMode() {
+  return !canMakeRealCalls();
+}
 
 /**
  * Build the system prompt for the design agent
@@ -59,6 +79,147 @@ Include a brief message explaining what you created.`;
 }
 
 /**
+ * Generate a simulated response based on user message
+ * @param {string} userMessage - The user's request
+ * @param {object} context - Canvas context
+ * @returns {object} Simulated response
+ */
+function generateSimulatedResponse(userMessage, context) {
+  const { canvas, brand } = context;
+  const message = userMessage.toLowerCase();
+
+  // Default text element
+  const defaultText = {
+    type: 'text',
+    name: 'AI Generated Text',
+    x: Math.round((canvas.width - 300) / 2),
+    y: Math.round(canvas.height / 3),
+    width: 300,
+    height: 60,
+    rotation: 0,
+    opacity: 1,
+    content: 'Your Text Here',
+    fontSize: 48,
+    fontFamily: brand?.fonts?.heading || 'Inter',
+    fontWeight: 700,
+    color: brand?.colors?.text || '#FFFFFF',
+    textAlign: 'center',
+    shapeType: null,
+    fill: null,
+    borderRadius: null,
+    src: null,
+    objectFit: null,
+  };
+
+  // Default shape element
+  const defaultShape = {
+    type: 'shape',
+    name: 'AI Generated Shape',
+    x: Math.round((canvas.width - 200) / 2),
+    y: Math.round((canvas.height - 100) / 2),
+    width: 200,
+    height: 100,
+    rotation: 0,
+    opacity: 1,
+    content: null,
+    fontSize: null,
+    fontFamily: null,
+    fontWeight: null,
+    color: null,
+    textAlign: null,
+    shapeType: 'rectangle',
+    fill: brand?.colors?.primary || '#6366F1',
+    borderRadius: 12,
+    src: null,
+    objectFit: null,
+  };
+
+  // Parse user intent
+  if (message.includes('headline') || message.includes('title') || message.includes('heading')) {
+    return {
+      operationType: 'add',
+      addElement: {
+        ...defaultText,
+        name: 'Headline',
+        content: 'Bold Headline',
+        fontSize: 64,
+        y: Math.round(canvas.height / 4),
+      },
+      updateElementId: null,
+      updateProperties: null,
+      deleteElementId: null,
+      message: 'I added a bold headline to your canvas. You can edit the text by clicking on it!',
+    };
+  }
+
+  if (message.includes('button') || message.includes('cta')) {
+    return {
+      operationType: 'add',
+      addElement: {
+        ...defaultShape,
+        name: 'CTA Button',
+        width: 160,
+        height: 48,
+        y: Math.round(canvas.height * 0.7),
+        borderRadius: 24,
+        fill: brand?.colors?.accent || '#22C55E',
+      },
+      updateElementId: null,
+      updateProperties: null,
+      deleteElementId: null,
+      message: 'I created a CTA button for you. Add text on top to complete it!',
+    };
+  }
+
+  if (message.includes('background') || message.includes('rectangle') || message.includes('shape')) {
+    return {
+      operationType: 'add',
+      addElement: {
+        ...defaultShape,
+        name: 'Background Shape',
+        x: Math.round(canvas.width * 0.1),
+        y: Math.round(canvas.height * 0.1),
+        width: Math.round(canvas.width * 0.8),
+        height: Math.round(canvas.height * 0.3),
+        borderRadius: 20,
+      },
+      updateElementId: null,
+      updateProperties: null,
+      deleteElementId: null,
+      message: 'I added a background shape. You can adjust its size and position as needed.',
+    };
+  }
+
+  if (message.includes('text') || message.includes('caption') || message.includes('subtitle')) {
+    return {
+      operationType: 'add',
+      addElement: {
+        ...defaultText,
+        name: 'Caption',
+        content: 'Your caption here',
+        fontSize: 24,
+        fontWeight: 400,
+        y: Math.round(canvas.height * 0.6),
+      },
+      updateElementId: null,
+      updateProperties: null,
+      deleteElementId: null,
+      message: 'I added a text caption. Click to edit the content!',
+    };
+  }
+
+  // Default response: add a text element
+  return {
+    operationType: 'add',
+    addElement: defaultText,
+    updateElementId: null,
+    updateProperties: null,
+    deleteElementId: null,
+    message: 'I added a text element to your canvas. This is a simulated response - real AI features require a backend server. Try asking for specific elements like "add a headline" or "create a button"!',
+  };
+}
+
+/**
  * Execute a design prompt and return structured operations
  * @param {string} userMessage - The user's design request
  * @param {object} context - Canvas context (canvas, duration, elements, selectedElement, brand)
@@ -67,6 +228,25 @@ Include a brief message explaining what you created.`;
  */
 export async function executeDesignPrompt(userMessage, context, provider = null) {
   const selectedProvider = provider || getDefaultProvider();
+
+  // Use simulation mode in client-side apps (no backend)
+  if (!canMakeRealCalls()) {
+    // Simulate network delay for realism
+    await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
+
+    const simulatedResult = generateSimulatedResponse(userMessage, context);
+    const operation = convertSchemaToOperation(simulatedResult);
+
+    return {
+      success: true,
+      operations: operation ? [operation] : [],
+      message: simulatedResult.message,
+      provider: selectedProvider,
+      simulated: true,
+    };
+  }
+
+  // Real API call (requires backend)
   const systemPrompt = buildDesignSystemPrompt(context);
 
   try {
@@ -77,11 +257,13 @@ export async function executeDesignPrompt(userMessage, context, provider = null)
       prompt: userMessage,
     });
 
+    // Convert flat schema response to operations array
+    const operation = convertSchemaToOperation(result.object);
+
     return {
       success: true,
-      operations: result.object.operations,
+      operations: operation ? [operation] : [],
       message: result.object.message,
-      thinking: result.object.thinking,
       provider: selectedProvider,
     };
   } catch (error) {
@@ -92,6 +274,42 @@ export async function executeDesignPrompt(userMessage, context, provider = null)
       provider: selectedProvider,
     };
   }
+}
+
+/**
+ * Convert flat schema response to operation object
+ * @param {object} schemaResult - The result from generateObject
+ * @returns {object|null} Operation object
+ */
+function convertSchemaToOperation(schemaResult) {
+  const { operationType, addElement, updateElementId, updateProperties, deleteElementId } = schemaResult;
+
+  switch (operationType) {
+    case 'add':
+      if (addElement) {
+        return { type: 'addElement', element: addElement };
+      }
+      break;
+    case 'update':
+      if (updateElementId && updateProperties) {
+        // Filter out null values from updates
+        const updates = {};
+        for (const [key, value] of Object.entries(updateProperties)) {
+          if (value !== null) {
+            updates[key] = value;
+          }
+        }
+        return { type: 'updateElement', id: updateElementId, updates };
+      }
+      break;
+    case 'delete':
+      if (deleteElementId) {
+        return { type: 'deleteElement', id: deleteElementId };
+      }
+      break;
+  }
+
+  return null;
 }
 
 /**
@@ -157,4 +375,5 @@ export default {
   executeDesignPrompt,
   executeOperations,
   executeDesignPromptWithFallback,
+  isSimulationMode,
 };

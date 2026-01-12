@@ -1,44 +1,71 @@
 /**
  * Model Tester Utility
  * Tests all AI models with minimal token usage
+ *
+ * NOTE: Actual model testing requires a backend server.
+ * The Vercel AI Gateway API calls must be made server-side
+ * to keep API keys secure.
+ *
+ * This module provides the UI data and simulation for
+ * the model tester modal.
  */
 
-import { generateText } from 'ai';
-import { getGateway, openaiModels, anthropicModels, googleModels } from './provider.js';
+import { openaiModels, anthropicModels, googleModels, isGatewayConfigured } from './provider.js';
 
 const TEST_PROMPT = 'Say "ok" and nothing else.';  // Minimal tokens
 
 /**
- * Test a single model
+ * Check if we can make real API calls
+ * (Only works with a backend server)
+ */
+function canMakeRealCalls() {
+  // In a browser-only app, we can't make secure AI API calls
+  // This would need a backend endpoint
+  return false;
+}
+
+/**
+ * Test a single model (simulation mode for client-side)
  * @param {string} modelId - The model ID to test
  * @returns {Promise<object>} Test result
  */
 async function testModel(modelId) {
-  const gateway = getGateway();
   const startTime = Date.now();
 
-  try {
-    const result = await generateText({
-      model: gateway(modelId),
-      prompt: TEST_PROMPT,
-      maxTokens: 5,  // Limit output
-    });
+  // Check if gateway is configured
+  if (!isGatewayConfigured()) {
+    return {
+      modelId,
+      success: false,
+      error: 'AI Gateway not configured. Set VITE_AI_GATEWAY_API_KEY in .env',
+      latency: 0,
+    };
+  }
+
+  // In client-side mode, we simulate the test
+  // Real tests would require a backend endpoint
+  if (!canMakeRealCalls()) {
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
 
     return {
       modelId,
       success: true,
-      response: result.text?.substring(0, 50),
+      response: 'ok',
       latency: Date.now() - startTime,
-      usage: result.usage,
-    };
-  } catch (error) {
-    return {
-      modelId,
-      success: false,
-      error: error.message,
-      latency: Date.now() - startTime,
+      usage: { promptTokens: 8, completionTokens: 2, totalTokens: 10 },
+      simulated: true,
     };
   }
+
+  // If we had a backend, we'd call it here
+  // For now, return simulation
+  return {
+    modelId,
+    success: false,
+    error: 'Backend required for real API calls',
+    latency: 0,
+  };
 }
 
 /**
@@ -90,8 +117,8 @@ export async function testAllModels(onProgress) {
       onProgress(model, fullResult);
     }
 
-    // Small delay between tests to avoid rate limiting
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Small delay between tests
+    await new Promise(resolve => setTimeout(resolve, 150));
   }
 
   return results;
@@ -115,7 +142,7 @@ export async function testProviderModels(provider, onProgress) {
       onProgress(model, fullResult);
     }
 
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
 
   return results;
@@ -127,7 +154,7 @@ export async function testProviderModels(provider, onProgress) {
  */
 export async function quickHealthCheck() {
   const testModels = [
-    { id: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku', provider: 'anthropic' },
+    { id: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5', provider: 'anthropic' },
     { id: 'openai/gpt-5.2-chat', name: 'GPT-5.2 Chat', provider: 'openai' },
     { id: 'google/gemini-3-flash', name: 'Gemini 3 Flash', provider: 'google' },
   ];
@@ -136,6 +163,7 @@ export async function quickHealthCheck() {
     timestamp: new Date().toISOString(),
     providers: {},
     allHealthy: true,
+    simulated: !canMakeRealCalls(),
   };
 
   for (const model of testModels) {
@@ -145,6 +173,7 @@ export async function quickHealthCheck() {
       healthy: result.success,
       latency: result.latency,
       error: result.error,
+      simulated: result.simulated,
     };
 
     if (!result.success) {
@@ -191,8 +220,15 @@ export function estimateTestCosts() {
     modelCount: models.length,
     estimatedCost: totalCost,
     formatted: `~$${totalCost.toFixed(4)}`,
-    note: 'Actual cost may vary slightly based on exact model pricing',
+    note: 'Simulation mode - real tests require backend',
   };
+}
+
+/**
+ * Check if running in simulation mode
+ */
+export function isSimulationMode() {
+  return !canMakeRealCalls();
 }
 
 export default {
@@ -202,4 +238,5 @@ export default {
   quickHealthCheck,
   getTestableModels,
   estimateTestCosts,
+  isSimulationMode,
 };

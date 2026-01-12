@@ -1,0 +1,126 @@
+{
+  "$schema": "https://claude.ai/code/hooks-schema.json",
+  "version": "1.0",
+  "description": "Social Canvas AI - Automated testing hooks based on code changes",
+
+  "hooks": {
+    "post-edit": {
+      "description": "Run appropriate tests after file edits",
+      "enabled": true,
+      "rules": [
+        {
+          "name": "UI Component Tests",
+          "pattern": "src/components/ui/**/*.{jsx,tsx,js,ts}",
+          "exclude": ["**/*.stories.*", "**/*.test.*"],
+          "actions": [
+            {
+              "type": "skill",
+              "skill": "test-visual",
+              "condition": "always"
+            },
+            {
+              "type": "skill",
+              "skill": "test-unit",
+              "condition": "has-test-file"
+            }
+          ]
+        },
+        {
+          "name": "Storybook Visual QA",
+          "pattern": "**/*.stories.{jsx,tsx,js,ts}",
+          "actions": [
+            {
+              "type": "skill",
+              "skill": "visual-qa",
+              "condition": "always"
+            }
+          ]
+        },
+        {
+          "name": "API Route Tests",
+          "pattern": "src/app/api/**/*.{ts,tsx,js,jsx}",
+          "actions": [
+            {
+              "type": "skill",
+              "skill": "test-e2e",
+              "condition": "always"
+            }
+          ]
+        },
+        {
+          "name": "Library Unit Tests",
+          "pattern": "src/lib/**/*.{ts,tsx,js,jsx}",
+          "exclude": ["**/registry/**"],
+          "actions": [
+            {
+              "type": "skill",
+              "skill": "test-unit",
+              "condition": "has-test-file"
+            }
+          ]
+        },
+        {
+          "name": "Page E2E Tests",
+          "pattern": "src/app/**/page.{tsx,jsx,ts,js}",
+          "actions": [
+            {
+              "type": "skill",
+              "skill": "test-e2e",
+              "condition": "always"
+            }
+          ]
+        },
+        {
+          "name": "E2E Test Files",
+          "pattern": "e2e/**/*.{ts,js}",
+          "actions": [
+            {
+              "type": "skill",
+              "skill": "test-e2e",
+              "condition": "always"
+            }
+          ]
+        }
+      ]
+    },
+
+    "pre-commit": {
+      "description": "Run full test suite before committing",
+      "enabled": true,
+      "actions": [
+        {
+          "type": "command",
+          "command": "npm run qa",
+          "description": "Run lint + unit tests + e2e"
+        }
+      ]
+    }
+  },
+
+  "skills": {
+    "test-unit": {
+      "command": "npm run test:run",
+      "description": "Run Vitest unit tests"
+    },
+    "test-e2e": {
+      "command": "npm run e2e",
+      "description": "Run Playwright E2E tests"
+    },
+    "test-visual": {
+      "command": "npm run storybook:build && npx playwright test --project=chromium",
+      "description": "Run Storybook visual tests"
+    },
+    "visual-qa": {
+      "command": "node scripts/visual-qa.mjs",
+      "description": "Full Haiku visual QA audit"
+    }
+  },
+
+  "registry": {
+    "enabled": true,
+    "trackComponents": true,
+    "trackTestResults": true,
+    "trackQAResults": true,
+    "storePath": ".registry"
+  }
+}

@@ -1,0 +1,76 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../card';
+import { Button } from '../button';
+import { Input } from '../input';
+import { Label } from '../label';
+
+export default {
+  title: 'UI/Tabs',
+  component: Tabs,
+  parameters: {
+    layout: 'centered',
+  },
+  tags: ['autodocs'],
+};
+
+export const Default = () => (
+  <Tabs defaultValue="account" className="w-[400px]">
+    <TabsList className="grid w-full grid-cols-2">
+      <TabsTrigger value="account">Account</TabsTrigger>
+      <TabsTrigger value="password">Password</TabsTrigger>
+    </TabsList>
+    <TabsContent value="account">
+      <Card>
+        <CardHeader>
+          <CardTitle>Account</CardTitle>
+          <CardDescription>
+            Make changes to your account here.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="space-y-1">
+            <Label htmlFor="name">Name</Label>
+            <Input id="name" defaultValue="John Doe" />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="username">Username</Label>
+            <Input id="username" defaultValue="@johndoe" />
+          </div>
+        </CardContent>
+      </Card>
+    </TabsContent>
+    <TabsContent value="password">
+      <Card>
+        <CardHeader>
+          <CardTitle>Password</CardTitle>
+          <CardDescription>
+            Change your password here.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="space-y-1">
+            <Label htmlFor="current">Current password</Label>
+            <Input id="current" type="password" />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="new">New password</Label>
+            <Input id="new" type="password" />
+          </div>
+        </CardContent>
+      </Card>
+    </TabsContent>
+  </Tabs>
+);
+
+export const Simple = () => (
+  <Tabs defaultValue="tab1" className="w-[400px]">
+    <TabsList>
+      <TabsTrigger value="tab1">Tab 1</TabsTrigger>
+      <TabsTrigger value="tab2">Tab 2</TabsTrigger>
+      <TabsTrigger value="tab3">Tab 3</TabsTrigger>
+    </TabsList>
+    <TabsContent value="tab1" className="p-4">Content for Tab 1</TabsContent>
+    <TabsContent value="tab2" className="p-4">Content for Tab 2</TabsContent>
+    <TabsContent value="tab3" className="p-4">Content for Tab 3</TabsContent>
+  </Tabs>
+);
